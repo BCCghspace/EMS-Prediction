@@ -311,15 +311,15 @@ harmful_lu <- parcel%>%filter(specificusetype=="Petroleum and Gas"|generalusetyp
     mutate(Legend = "harmfullanduse")
 
 #osm
-#sport <- st_read("E:/Upenn/CPLN508/final project/EMS-Prediction/sport.geojson") %>%
-  sport <- st_read("/Users/annaduan/Documents/GitHub/EMS-Prediction/sport.geojson") %>%
+sport <- st_read("E:/Upenn/CPLN508/final project/EMS-Prediction/sport.geojson") %>%
+#  sport <- st_read("/Users/annaduan/Documents/GitHub/EMS-Prediction/sport.geojson") %>%
     st_transform(st_crs(fishnet))%>%
     mutate(Legend = "sport") 
 
 
 
-#health <- read.csv("E:/Upenn/CPLN508/final project/EMS-Prediction/healthIndicators.csv")
-health <- read.csv("/Users/annaduan/Documents/GitHub/EMS-Prediction/healthIndicators.csv") 
+health <- read.csv("E:/Upenn/CPLN508/final project/EMS-Prediction/healthIndicators.csv")
+#health <- read.csv("/Users/annaduan/Documents/GitHub/EMS-Prediction/healthIndicators.csv") 
 acs_health <- dplyr::left_join(ACS, health, by=c("NAME" = "name"))
 
 # ATTACH VARIABLES TO FISHNET
@@ -385,6 +385,7 @@ vars_net <-
   st_join(vars_net, fishnet, join=st_within)
 
 #AD: not sure this is neighborhood- neighborhood association is different
+#BC: sadly it's the only data we have got. I think these two may be very similar? http://www.city-data.com/nbmaps/neigh-Santa-Monica-California.html
 neighborhood <- st_read("https://opendata.arcgis.com/datasets/63595d717c494165b3c6b3b85c2463ae_0.geojson")%>%
       st_transform(st_crs(fishnet))
 
@@ -500,12 +501,10 @@ ggplot() +
   labs(title = "Figure 2: Observed EMS Response Time (minutes) Joined to Fishnet, 2010-2020", subtitle = "Santa Monica, CA") +
   mapTheme()  
 
-  
-#???not sure why we have few data
 
 ggplot() + 
   #geom_sf(data = ACS, fill = "black") +
-  stat_density2d(data = data.frame(st_coordinates(emergencies)), 
+  stat_density2d(data = data.frame(st_coordinates(emergencies.sf)), 
                  aes(X, Y, fill = ..level.., alpha = ..level..),
                  size = 0.01, bins = 15, geom = 'polygon') +
   scale_fill_gradient(low = "#25CB10", high = "#FA7800", 
@@ -520,7 +519,7 @@ ggplot() +
 ```{r moran}
 ##Prepare for moran's
 library(spdep)
-final_net.nb <- poly2nb(as_Spatial(final_net), queen=TRUE)  #AD: not working
+final_net.nb <- poly2nb(as_Spatial(final_net), queen=TRUE)  #AD: not working #?not sure why
 final_net.weights <- nb2listw(final_net.nb, style="W", zero.policy=TRUE)
 
 final_net.localMorans <- 
@@ -550,6 +549,8 @@ final_net <-
 EMS_2020 <- EMS_2020 %>%
   mutate(interval60 = floor_date(ymd_hms(received), unit = "hour"),
          interval15 = floor_date(ymd_hms(received), unit = "15 mins"),
+         interval5 = floor_date(ymd_hms(received), unit = "5 mins"),
+         interval1 = floor_date(ymd_hms(received), unit = "1 min"),
          week = week(interval60),
          dotw = wday(interval60, label=TRUE)) 
 
@@ -584,7 +585,7 @@ dat_census <- st_join(.,EMS_2020) %>%
          latitude = unlist(map(geometry, 2)))%>%
   as.data.frame() %>%
 
-library(dplyr) 
+library(dplyr)
 dat_net <- st_join(EMS_2020 %>% 
           filter(is.na(longitude) == FALSE &
                    is.na(latitude) == FALSE) %>%
@@ -630,8 +631,6 @@ study.panel.15 <-
               group_by(uniqueID) %>%
               slice(1))
 
-<<<<<<< Updated upstream
-=======
 install.packages("vctrs")
 
 study.panel.2010 <- 
@@ -643,7 +642,6 @@ study.panel.2010 <-
               group_by(uniqueID) %>%
               slice(1))
 
->>>>>>> Stashed changes
 
 study.panel <- 
   dat_net %>%
@@ -749,36 +747,36 @@ ggplot(EMS_2010 %>%
          group_by(week) %>%
          tally())+
   geom_line(aes(x = week, y = n))+
-  labs(title="EMS calls, Santa Monica, 2010-2020 by week",
+  labs(title="Figure 4.1: EMS trips, Santa Monica, 2010-2020 by week",
        x="week of the year", 
-       y="Number of calls")+
+       y="Number of trips")+
   plotTheme
 
 ggplot(EMS_2010 %>%
          group_by(dotw) %>%
          tally())+
   geom_line(aes(x = dotw, y = n, group = 1))+
-  labs(title="EMS calls, Santa Monica, 2010-2020 by day of the week",
+  labs(title="Figure 4.2: EMS trips, Santa Monica, 2010-2020 by day of the week",
        x="Day", 
-       y="Number of calls")+
+       y="Number of trips")+
   plotTheme
 
 ggplot(EMS_2020 %>%
          group_by(week) %>%
          tally())+
   geom_line(aes(x = week, y = n))+
-  labs(title="EMS calls, Santa Monica, 2020 by week",
+  labs(title="Figure 4.3: EMS trips, Santa Monica, 2020 by week",
        x="week of the year", 
-       y="Number of calls")+
+       y="Number of trips")+
   plotTheme
 
 ggplot(EMS_2020 %>%
          group_by(dotw) %>%
          tally())+
   geom_line(aes(x = dotw, y = n, group = 1))+
-  labs(title="EMS calls, Santa Monica, 2020 by day of the week",
+  labs(title="Figure 4.4: EMS trips, Santa Monica, 2020 by day of the week",
        x="Day", 
-       y="Number of calls")+
+       y="Number of trips")+
   plotTheme
 
 #on a RANDOM Wednesday
@@ -787,9 +785,9 @@ ggplot(EMS_2020_W1 %>%
          group_by(interval60) %>%
          tally())+
   geom_line(aes(x = interval60, y = n))+
-  labs(title="EMS calls, Santa Monica, 2020 on a random Wednesday",
-       x="Time", 
-       y="Number of calls")+
+  labs(title="Figure 4.4: EMS trips, Santa Monica, 2020 by day of the week",
+       x="Day", 
+       y="Number of trips")+
   plotTheme
 
 EMS_2020 %>% 
@@ -803,8 +801,8 @@ EMS_2020 %>%
   summarize(mean_trips = mean(n))%>%
   ggplot()+
   geom_histogram(aes(mean_trips), binwidth = 1)+
-  labs(title="Mean Number of Hourly calls Per reporting district. Santa Monica,2020",
-       x="Number of calls", 
+  labs(title="Figure 4.2: Mean Number of Hourly Trips Per reporting district. Philadelphia, Nov, 2018",
+       x="Number of trips", 
        y="Frequency")+
   facet_wrap(~time_of_day)+
   plotTheme
@@ -812,9 +810,9 @@ EMS_2020 %>%
 #hour of dotw
 ggplot(EMS_2020 %>% mutate(hour = hour(received)))+
      geom_freqpoly(aes(hour, color = dotw), binwidth = 1)+
-  labs(title="EMS calls in Santa Monica, by day of the week, 2020",
+  labs(title="Figure 4.3: EMS calls in Santa Monica, by day of the week, 2020",
        x="Hour", 
-       y="Call Counts")+
+       y="Trip Counts")+
      plotTheme
 
 
@@ -822,9 +820,9 @@ ggplot(EMS_2020 %>%
          mutate(hour = hour(received),
                 weekend = ifelse(dotw %in% c("Sun", "Sat"), "Weekend", "Weekday")))+
      geom_freqpoly(aes(hour, color = weekend), binwidth = 1)+
-  labs(title="EMS calls in Santa Monica - weekend vs weekday, 2020",
+  labs(title="Figure 4.4: EMS calls in Santa Monica - weekend vs weekday, 2020",
        x="Hour", 
-       y="Call Counts")+
+       y="Trip Counts")+
      plotTheme
 
 #origin map
@@ -847,7 +845,7 @@ ggplot()+
   ylim(min(dat_census$latitude), max(dat_census$latitude))+
   xlim(min(dat_census$longitude), max(dat_census$longitude))+
   facet_grid(weekend ~ time_of_day)+
-  labs(title="EMS calls per hour by reporting district. Santa Monica, 2020")+
+  labs(title="Figure 4.5: EMS calls per hr by reporting district. Santa Monica, 2020")+
   mapTheme
 
 
@@ -882,15 +880,14 @@ EMS_animation <-
     geom_sf(data = ems.animation.data, aes(col = Trips), size= 5, show.legend = "point")+
     geom_sf(data = neighborhood, color = "grey", fill = "transparent")+
     scale_fill_manual(values = c("green", "yellow", "orange","red")) +
-    labs(title = "EMS calls for one week in May 2020",
+    labs(title = "Figure 4.6: EMS calls for one week in May 2020",
          subtitle = "1 hour intervals: {current_frame}") +
     transition_manual(interval60) +
     mapTheme
 
 animate(EMS_animation, duration=20, renderer = gifski_renderer())
 
-anim_save("ems_local.gif", EMS_animation, duration=20, renderer = gifski_renderer())
-#magick::image_write(anim, path="myanimation.gif")
+anim_save("ems_local", EMS_animation, duration=20, renderer = gifski_renderer())
 ```
 
 
